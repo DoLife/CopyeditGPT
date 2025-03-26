@@ -1,103 +1,149 @@
-import os, global_var, logging
+import os
+import logging
 from flask import Flask, render_template, request, send_file, redirect
 from werkzeug.exceptions import RequestEntityTooLarge
 from functions import run_editor
-from dotenv import load_dotenv, find_dotenv
 import docx
+import requests
 
-# from flask_socketio import SocketIO
-# this will come into use when we start using web sockets in order to get a better progress page running
-
-load_dotenv(find_dotenv())
-logging.basicConfig(level=logging.INFO, filename="log.log", filemode="w")
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    filename="app.log",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filemode="w"
+)
 logger = logging.getLogger(__name__)
-
-# Turn on debug level log statements from all libraries
-logging.getLogger().setLevel(logging.DEBUG)
 
 app = Flask(__name__)
 app.config["UPLOAD_DIRECTORY"] = 'text_files/'
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024 #16MB
-app.config["ALLOWED_EXTENSIONS"] = [".txt", ".docx"] #Would like to add LaTex and RTF compatibility later.
-# socketio = SocketIO(app)
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
+app.config["ALLOWED_EXTENSIONS"] = [".txt", ".docx"]
 
-@app.route('/', methods=["GET", "POST"])
+class GlobalState:
+    def __init__(self):
+        self.submit_text = ""
+
+global_state = GlobalState()
+
+def check_ollama_status():
+    """Check if Ollama server is running and the model is available"""
+    try:
+        # First check if server is running
+        health_check = requests.get("http://localhost:11434")
+        if health_check.status_code != 200:
+            return False
+            
+        # Now check if our model exists
+        response = requests.post(
+            "http://localhost:11434/api/show",
+            json={"name": "llama3.2-8b-instruct-128k:latest"}
+        )
+        return response.status_code == 200
+        
+    except requests.exceptions.RequestException:
+        return False
+
+@app.route('/', methods=["GET"])
 def index():
-    if request.method == "GET":
-        return render_template("index.html")
-
+    # Check Ollama status when loading the main page
+    ollama_available = check_ollama_status()
+    if not ollama_available:
+        return render_template("error.html", 
+                             error="Ollama server is not running or required model is not available. " 
+                             "Please ensure Ollama is running and the model is installed.")
+    return render_template("index.html")
 
 @app.route('/upload', methods=["POST"])
 def upload():
-    global_var.submit_text = "" #clear this variable in case the user clicked the back button
-    global_var.key = request.form['key']
-    if request.form['upload'] == "upload_file":
-        try:
+    global_state.submit_text = ""  # Reset submit text
+    
+    try:
+        if request.form['upload'] == "upload_file":
             file = request.files['file']
             if not file:
                 return "Must upload a file"
-            # Would be nice to check the file size here. Not sure if MAX_CONTENT checks it here or after file.save, 
-            # but it takes a long time for it to check files that are 1 GB+
+                
             extension = os.path.splitext(file.filename)[1]
             if extension not in app.config["ALLOWED_EXTENSIONS"]:
                 logger.error("Unallowed extension uploaded")
                 return "Cannot upload that file type. Must be '.txt' or '.docx'"
-        except RequestEntityTooLarge:
-            return "File is too large."
 
-        if extension == ".txt":
-            for paragraph in file.read().decode('utf-8', errors='ignore').split("\n"):
-                global_var.submit_text += paragraph + "\n"
+            if extension == ".txt":
+                text = file.read().decode('utf-8', errors='ignore')
+                global_state.submit_text = text
 
-        if extension == ".docx":
-            file = docx.Document(file)
-            for paragraph in file.paragraphs:
-                global_var.submit_text += paragraph.text + "\n"
+            if extension == ".docx":
+                doc = docx.Document(file)
+                global_state.submit_text = '\n'.join(paragraph.text for paragraph in doc.paragraphs)
 
-    if request.form['upload'] == "upload_text":        
-        #reset paragraph formatting sent by the HTML form
-        for paragraph in request.form['text_box'].split("\r\n"):
-            global_var.submit_text += paragraph + "\n"
-        if global_var.submit_text == [""]:
-            return "Text box is blank"
-    return redirect('/progress')
+        elif request.form['upload'] == "upload_text":
+            text = request.form['text_box']
+            if not text.strip():
+                return "Text box is blank"
+            global_state.submit_text = text
 
+        return redirect('/progress')
+
+    except RequestEntityTooLarge:
+        return "File is too large. Maximum size is 16MB."
+    except Exception as e:
+        logger.error(f"Error in upload: {str(e)}")
+        return f"An error occurred: {str(e)}"
 
 @app.route('/progress', methods=["GET", "POST"])
 def progress():
-    chunk_count = (len(global_var.submit_text) // 4000) + 1
+    if not global_state.submit_text:
+        return redirect('/')
+        
+    chunk_count = (len(global_state.submit_text) // 4000) + 1
+    
     if request.method == "GET": 
-        return render_template("progress.html", chunks=chunk_count, wait=chunk_count * 15)
+        return render_template(
+            "progress.html",
+            chunks=chunk_count,
+            wait=chunk_count * 15
+        )
+        
     if request.method == "POST":
-        run_editor(global_var.submit_text, chunk_count)
-        return redirect('/results')
-
+        try:
+            run_editor(global_state.submit_text, chunk_count)
+            return redirect('/results')
+        except Exception as e:
+            logger.error(f"Error in processing: {str(e)}")
+            return render_template("error.html", error=str(e))
 
 @app.route('/results')
 def results():    
-    with open("text_files/edited.txt", "r", encoding='utf-8', errors="ignore") as f:
-        edited_text = f.read()
-    edited_text = edited_text.split("\n")
-    return render_template("results.html", text_to_display=edited_text)
-
+    try:
+        with open("text_files/edited.txt", "r", encoding='utf-8', errors="ignore") as f:
+            edited_text = f.read().split("\n")
+        return render_template("results.html", text_to_display=edited_text)
+    except Exception as e:
+        logger.error(f"Error displaying results: {str(e)}")
+        return render_template("error.html", error=str(e))
 
 @app.route('/download')
 def download(): 
     file_type = request.args.get('type')
-    if file_type == "txt":
-        return send_file("text_files/edited.txt", as_attachment=True)
-    
-    #*Would be nice to match the original document's formatting. Otherwise it is difficult to reject changes. 
-    if file_type == "docx":
-        edited = docx.Document()
-        with open("text_files/edited.txt", "r", encoding='utf-8', errors="ignore") as f:
-            edited_text = f.read()
-        edited_text = edited_text.split("\n")
-        for paragraph in edited_text:
-            edited.add_paragraph(paragraph)
-        edited.save("text_files/edited.docx")
-        return send_file("text_files/edited.docx")
-
+    try:
+        if file_type == "txt":
+            return send_file("text_files/edited.txt", as_attachment=True)
+        
+        if file_type == "docx":
+            edited = docx.Document()
+            with open("text_files/edited.txt", "r", encoding='utf-8', errors="ignore") as f:
+                edited_text = f.read().split("\n")
+            
+            for paragraph in edited_text:
+                if paragraph.strip():  # Only add non-empty paragraphs
+                    edited.add_paragraph(paragraph)
+                    
+            edited.save("text_files/edited.docx")
+            return send_file("text_files/edited.docx", as_attachment=True)
+    except Exception as e:
+        logger.error(f"Error in download: {str(e)}")
+        return render_template("error.html", error=str(e))
 
 if __name__ == "__main__":
     app.run(debug=True)

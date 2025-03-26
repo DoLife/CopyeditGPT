@@ -1,10 +1,24 @@
 {% extends "layout.html" %}
 
-{% block title %}
-    Error
-{% endblock %}
-    
-{% block main %}
-<!-- https://memegen.link/ -->
-<img alt="{{ top }}" class="border img-fluid" src="http://memegen.link/custom/{{ top | urlencode }}/{{ bottom | urlencode }}.jpg?alt=https://i.imgur.com/CsCgN7Ll.png&width=400" title="{{ top }}">
+{% block content %}
+<div class="container">
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Error</h4>
+        <p>{{ error }}</p>
+        {% if "Ollama server is not running" in error %}
+        <hr>
+        <p class="mb-0">
+            Please ensure that:
+            <ul>
+                <li>Ollama is installed and running on your system</li>
+                <li>The required model (llama3.2-8b-instruct-128k:latest) is installed</li>
+                <li>The Ollama server is accessible at localhost:11434</li>
+            </ul>
+            You can install the required model using:
+            <pre>ollama pull llama3.2-8b-instruct-128k:latest</pre>
+        </p>
+        {% endif %}
+    </div>
+    <a href="/" class="btn btn-primary">Return to Home</a>
+</div>
 {% endblock %}
