@@ -1,54 +1,78 @@
 # CopyeditGPT
-A Flask app that sends text to OpenAI for copy editing. 
+A Flask app that uses Ollama's local LLM for copy editing. 
 
-<h2>Welcome to CopyeditGPT!</h2>
-This project helps you utilize OpenAI's GPT3 engine to copy edit your documents. Submit a .txt file with writing of any kind, and the site will return a document that has been edited for spelling, grammar, punctuation, syntax, and other specifications of the Chicago Manual of Style. 
+## Welcome to CopyeditGPT!
+This project helps you utilize Ollama's LLM capabilities to copy edit your documents. Submit a .txt or .docx file with writing of any kind, and the site will return a document that has been edited for spelling, grammar, punctuation, syntax, and other specifications of the Chicago Manual of Style. 
 
-While ChatGPT and the OpenAI API have length limitations for submissions, this web app will handle almost any length behind the scenes, breaking down large documents into chunks of about one thousand words, submitting them in successive API calls, then returning the results in one file. Be mindful that this app breaks documents down by paragraph, so if your document has huge paragraphs (specifically, two successive paragraphs totaling more than about 1500 words), then it may resort in an error. 
+The web app handles documents of any reasonable length by breaking them down into chunks of about 4000 characters, processing them sequentially using Ollama, then returning the results in one file. Be mindful that this app breaks documents down by paragraph, so if your document has huge paragraphs (specifically, two successive paragraphs totaling more than about 1500 words), then it may result in an error. 
 
-<h3>How to Use</h3>
-You will need:<br>
-1. An OpenAI API key.<br>
-2. Your writing in a .txt file.<br>
-3. Patience (especially with long documents)<br>
+### How to Use
+You will need:
+1. Ollama installed and running on your system
+2. The llama3.2-8b-instruct-128k:latest model installed
+3. Your writing in a .txt or .docx file
+4. Patience (especially with long documents)
 
-Currently, this code functions only in a local Flask environment. The only additional library you will need is OpenAI (get it with 'pip install openai'). Run the flask app and navigate to http://localhost:5000/ in order to try it out!
+Currently, this code functions only in a local Flask environment. Run the flask app and navigate to http://localhost:5000/ in order to try it out!
 
-<h4>API Key</h4>
+### Setup Instructions
 
-If you don't have an API key, head to <a href="https://platform.openai.com/account/api-keys/" target="_blank">OpenAI's API page</a> and create an account. You will also need to set up a payment method, as the API does cost a negligible amount for usage.
+1. Install Ollama from the official website if you haven't already
+2. Install the required model:
+```bash
+ollama pull llama3.2-8b-instruct-128k:latest
+```
+3. Start the Ollama server:
+```bash
+ollama serve
+```
+4. Install Python requirements:
+```bash
+pip install -r requirements.txt
+```
+5. Run the application:
+```bash
+python app.py
+```
 
-How much does it cost? The short answer is, very little.<br>
-This app is using the Davinci-003 model, which costs $0.03 per one thousand tokens of usage. Analysis of one thousand words will use about 2,500 tokens. So, editing a full-length article will run you about ten cents. A novel of one hundred thousand words will run you about half the cost of a cup of coffee.
+### Supported File Types
+Currently this editor accepts:
+- .txt files
+- .docx files
 
-<h4>.txt Files</h4>
-Currently this editor only accepts .txt files, as I am still working to ensure it provides consistently formatted results. It should soon be accepting .docx, .doc, and other text files, as I will be exploring which Python modules are most useful here.
+Support for additional formats like .doc and LaTeX files is planned for future updates.
 
-<h4>Patience</h4>
-A submission of a thousand words takes about fifteen to thirty seconds to process, depending on the time of day. If you have to stare at a loading wheel for a while, just imagine what it was like being a programmer in 1990 trying to download an entire megabyte of data.
+### Processing Time
+Processing time depends on your system's capabilities and the size of the text. The application processes text in chunks of approximately 4000 characters each. Processing speed will vary based on your hardware and the specific model configuration.
 
-<h3>How to Process Your Results</h3>
-You will get back a .txt with corrections made at GPT-3's discretion. You will want to compare this to your old document and choose which changes to keep or reject. For that, you can use Microsoft Word's compare tool, under the review panel.
+### How to Process Your Results
+You will get back a file with corrections made at the LLM's discretion. You can download the results in either .txt or .docx format. You will want to compare this to your old document and choose which changes to keep or reject. For that, you can use Microsoft Word's compare tool, under the review panel.
 
-<h3>How to Contribute to this Project</h3>
+### How to Contribute to this Project
 Please contribute!
 
 This project still has a lot of room for improvement, and I hope to see it through. So if you're looking for an open source Flask project that will be easy to jump into, this is a great choice! 
 
-<h4>Aspects that need to be implemented or improved:</h4>
-<h4>More modern frontend framework and design.</h4> 
-I'm open to any ideas here. This site has a little bit of Bootstrap usage. Otherwise this is just plain HTML and needs a lot of work. We need more robust error message feedback for incorrect entries, including incorrect files, exceeding limitations, incorrect API keys, etc.
-<h4>Progress bar</h4>
-An interim page to provide feedback on the progress as the document is processing. At the very least, a process which counts the words of the submission then updates the user on what percent has been processed with each API call (which processes about a thousand words at a time).
-<h4>.docx and .doc compatibility</h4>
-I would like to use the Aspose.Words library to receive text in .docx files. I am not sure if there is a way to return a document to the user that shows the GPT-3 changes as a markup, but if that is possible this must be implemented!
-<h4>Ability to customize prompts and depth of editing</h4>
-Currently, the settings on the API call are fixed, but it would not be difficult to implement a frontend panel which lets the client alter some of the settings. They may want to alter the prompt, changes which style guide to follow, dial up the "temperature," or alter other settings. These will need to be succinctly explained to the user and made easy to alter through a menu.
-<h4>User registration and file storage</h4>
-The user should be able register a username and navigate to the results page and download their edited files at anytime from a database. SQLAlchemy needs to be built in for storing binary files generated in the results section. 
-<h4>Ensure consistency and accuracy of results</h4>
-Experiment with the prompt and other parameters in the API call to ensure the ChatGPT engine will give back optimal results. With the current settings, it will tend to over-edit. With the current method of splitting up text, the engine may be confused by sentences abruptly ending and starting.
-<h3>Thanks for reading!</h3>
-Please give the app a try and review my code! This is my first ever coding project. I have a lot to learn and would very much like to work with others who can provide constructive criticism to help improve my abilities.<br>
+#### Aspects that need to be implemented or improved:
+#### More modern frontend framework and design 
+The site has a little bit of Bootstrap usage. Otherwise this is just plain HTML and needs a lot of work. We need more robust error message feedback for incorrect entries, including incorrect files, exceeding limitations, etc.
 
-Thank you to the people that contributed as well!
+#### Progress bar and real-time updates
+An interim page to provide feedback on the progress as the document is processing. The groundwork for WebSocket support is in place but needs to be implemented.
+
+#### Additional file format support
+Support for additional file formats like .doc, LaTeX, and RTF.
+
+#### Ability to customize prompts and processing parameters
+Currently, the settings for the LLM processing are fixed, but it would be beneficial to implement a frontend panel which lets the client alter some of the settings. They may want to alter the prompt, change which style guide to follow, adjust the temperature parameter, or modify other settings.
+
+#### User registration and file storage
+The user should be able register a username and navigate to the results page and download their edited files at anytime from a database. SQLAlchemy needs to be built in for storing files generated in the results section.
+
+#### Ensure consistency and accuracy of results
+Experiment with the prompt and other parameters to ensure optimal results. With the current settings, it may tend to over-edit. With the current method of splitting up text, the model may be confused by sentences abruptly ending and starting.
+
+### Thanks for reading!
+Please give the app a try and review the code! Constructive criticism and contributions are welcome to help improve the project.
+
+Thank you to everyone who has contributed!

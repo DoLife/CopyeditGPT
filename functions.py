@@ -34,18 +34,14 @@ def run_editor(submit_text, chunk_count):
     """Process text in chunks and apply editing"""
     try:
         client = OllamaClient(model="llama3.2-8b-instruct-128k:latest")
-        with open("text_files/edited.txt", "w", encoding='utf-8', errors="ignore") as edited_text:
-            run_count = 0
-            chunks = chunk_text(submit_text)
+        edited_text = ""
+        chunks = chunk_text(submit_text)
+        
+        for chunk in chunks:
+            edited_chunk = ollama_edit(client, chunk)
+            edited_text += edited_chunk
             
-            for chunk in chunks:
-                edited_chunk = ollama_edit(client, chunk)
-                edited_text.write(edited_chunk)
-                
-                run_count += 1
-                progress = (run_count / chunk_count) * 100
-                logger.info(f"Processing progress: {progress:.1f}%")
-                print("Finished {:.0%}".format(run_count / chunk_count))
+        return edited_text.strip()
                 
     except Exception as e:
         logger.error(f"Error in run_editor: {str(e)}")

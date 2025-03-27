@@ -4,7 +4,6 @@
 
 #if you want to write down your key or other personal notes without pushing them to the repository:
 personal_notes.txt
-run.bat
 
 #Standard ignore commands below:
 # Created by https://www.toptal.com/developers/gitignore/api/flask

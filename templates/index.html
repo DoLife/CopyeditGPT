@@ -14,20 +14,21 @@
     </div>
     <br>
     <h2>How it works:</h2>
-    <p>Upload a Word document or '.txt' file of almost any size (limit 16MB) that needs some touchup to the spelling, grammar, punctuation, and other style specifics.
-        The application will process your file using the local Ollama AI model to provide professional copy editing following the Chicago Manual of Style. 
+    <p>Upload Word documents (.docx) or text files (.txt) of almost any size (limit 16MB per file) that need touchup to the spelling, grammar, punctuation, and other style specifics.
+        The application will process your files using the local Ollama AI model to provide professional copy editing following the Chicago Manual of Style. 
     </p>
-    <p>Processing time may vary depending on your system's capabilities and the size of the text.
+    <p>Processing time may vary depending on your system's capabilities and the size of the text. Files will be processed sequentially.
     </p>
     <div>
         <form action="/upload" method="post" enctype="multipart/form-data">
-            <h3>Upload a Word document (.docx)</h3>
+            <h3>Upload Word documents (.docx) or text files (.txt)</h3>
             <div class="mb-3">
-                <label for="fileUpload" class="form-label"></label>
-                <input class="form-control" type="file" name="file" id="file">
+                <label for="files" class="form-label">Select one or multiple files to edit</label>
+                <input type="file" class="form-control" id="files" name="files" multiple accept=".txt,.docx">
+                <small class="form-text text-muted">Hold Ctrl (Windows) or Command (Mac) while selecting to choose multiple files.</small>
             </div>
             <div>
-                <button class="btn btn-dark" type="submit" name="upload" value="upload_file">Submit file</button>    
+                <button class="btn btn-dark" type="submit" name="upload" value="upload_files">Submit files</button>    
             </div>
             <br><br>
             <h4>Or paste your text below</h4>

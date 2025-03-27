@@ -5,6 +5,9 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from functions import run_editor
 import docx
 import requests
+import webbrowser
+import threading
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -44,6 +47,11 @@ def check_ollama_status():
     except requests.exceptions.RequestException:
         return False
 
+def open_browser():
+    """Open browser after a short delay"""
+    time.sleep(1.5)  # Wait for Flask to start
+    webbrowser.open('http://localhost:5000/')
+
 @app.route('/', methods=["GET"])
 def index():
     # Check Ollama status when loading the main page
@@ -59,23 +67,30 @@ def upload():
     global_state.submit_text = ""  # Reset submit text
     
     try:
-        if request.form['upload'] == "upload_file":
-            file = request.files['file']
-            if not file:
-                return "Must upload a file"
-                
-            extension = os.path.splitext(file.filename)[1]
-            if extension not in app.config["ALLOWED_EXTENSIONS"]:
-                logger.error("Unallowed extension uploaded")
-                return "Cannot upload that file type. Must be '.txt' or '.docx'"
+        if request.form['upload'] == "upload_files":
+            # Get list of uploaded files
+            files = request.files.getlist('files')
+            
+            if not files or not files[0].filename:
+                return "Must upload at least one file"
 
-            if extension == ".txt":
-                text = file.read().decode('utf-8', errors='ignore')
-                global_state.submit_text = text
+            # Process each file and combine their content
+            combined_text = ""
+            for file in files:
+                extension = os.path.splitext(file.filename)[1].lower()
+                if extension not in app.config["ALLOWED_EXTENSIONS"]:
+                    return f"Cannot upload file type {extension}. Must be '.txt' or '.docx'"
 
-            if extension == ".docx":
-                doc = docx.Document(file)
-                global_state.submit_text = '\n'.join(paragraph.text for paragraph in doc.paragraphs)
+                if extension == ".txt":
+                    content = file.read().decode('utf-8', errors='ignore')
+                    combined_text += f"\n=== File: {file.filename} ===\n\n{content}\n\n"
+
+                elif extension == ".docx":
+                    doc = docx.Document(file)
+                    content = "\n".join(paragraph.text for paragraph in doc.paragraphs)
+                    combined_text += f"\n=== File: {file.filename} ===\n\n{content}\n\n"
+
+            global_state.submit_text = combined_text
 
         elif request.form['upload'] == "upload_text":
             text = request.form['text_box']
@@ -146,4 +161,7 @@ def download():
         return render_template("error.html", error=str(e))
 
 if __name__ == "__main__":
+    # Start the browser opener in a separate thread
+    threading.Thread(target=open_browser).start()
+    # Start the Flask app
     app.run(debug=True)

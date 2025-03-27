@@ -3,24 +3,55 @@
 {% block title %}
     Results
 {% endblock %}
-    
+
 {% block main %}
-<div style="margin-left:10%;">  
-<h1>Results</h1>
-</div>
-    <br><br><br>
-    <div style="text-align: center;">
-        <button class="btn btn-dark" onclick="window.location.href='/download?type=txt';">Download Plain Text</button>
-        <button class="btn btn-dark" onclick="window.location.href='/download?type=docx';">Download Word Document</button>
-    </div>
-    
-    <br><br>
-    {% for p in text_to_display %}
-    <p>{{p}}</p>
-    {% endfor %}
-    <br>
-    <div style="text-align:center;">
-        <button class="btn btn-dark" onclick="window.location.href='/';" >Back to editor</button>
-    </div>
-    
+    {% if processed_files %}
+        <!-- Multiple files results -->
+        <div class="container">
+            <h2>Processed Files</h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Original File</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in processed_files %}
+                        <tr>
+                            <td>{{ file.original_name }}</td>
+                            <td>
+                                <span class="badge bg-success">Processed</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{{ url_for('download') }}" class="btn btn-primary">
+                    Download All Edited Files (ZIP)
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <!-- Single text input results -->
+        <div class="container">
+            <h2>Edited Text</h2>
+            <div class="form-group">
+                <textarea class="form-control" rows="20" readonly>
+                    {% for line in text_to_display %}
+                        {{ line }}
+                    {% endfor %}
+                </textarea>
+            </div>
+            <br>
+            <div class="btn-group">
+                <a href="{{ url_for('download', type='txt') }}" class="btn btn-primary">Download as .txt</a>
+                <a href="{{ url_for('download', type='docx') }}" class="btn btn-primary">Download as .docx</a>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}
